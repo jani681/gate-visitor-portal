@@ -1,0 +1,6 @@
+{
+  "name": "Gate Visitor Portal",
+  "description": "Visitor check-in web portal for gate security systems. Decodes QR parameters, captures photos, uploads to Firebase, and syncs intercom messages.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
