@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 
-// Firebase Configuration
+// Firebase Configuration (Active keys)
 const firebaseConfig = {
-  apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfnDX6ix0",
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
   authDomain: "gatepass-saas.firebaseapp.com",
   projectId: "gatepass-saas",
   storageBucket: "gatepass-saas.firebasestorage.app",
@@ -17,7 +17,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 interface VisitorLog {
-  id: string;
+  id?: string;
   name: string;
   cnic: string;
   purpose: string;
@@ -26,23 +26,21 @@ interface VisitorLog {
 }
 
 export default function App() {
-  // Navigation State (URL scan karne ke liye)
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Navigation View Switcher State
+  const [isOwner, setIsOwner] = useState(false);
 
   // Visitor Portal States
   const [visitorName, setVisitorName] = useState('');
   const [cnic, setCnic] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  // Shared Live Logs State
   const [logs, setLogs] = useState<VisitorLog[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // URL check karne ke liye hook (Simple Routing Bypass)
+  // URL Query Parameter Check (?role=owner)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('role') === 'owner') {
-      setIsAdmin(true);
+      setIsOwner(true);
     }
   }, []);
 
@@ -59,7 +57,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Action Submission (Visitor)
+  // Check-in Request Handler (Visitor)
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!visitorName || !cnic) return alert('Name aur CNIC zaroori hain!');
@@ -83,7 +81,7 @@ export default function App() {
     setLoading(false);
   };
 
-  // Status Action handler (Owner/Admin)
+  // Approval/Rejection Handler (Owner)
   const handleUpdateStatus = async (logId: string, newStatus: 'Approved' | 'Rejected') => {
     try {
       const docRef = doc(db, "visitor_logs", logId);
@@ -96,24 +94,27 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-black text-white p-4 flex flex-col items-center justify-center font-sans antialiased">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-black text-white p-4 flex flex-col items-center justify-center font-sans antialiased relative">
       
-      {/* View Switcher Toggle (For Testing / Ease of Access) */}
+      {/* 🛠️ Testing Toggle Button (Siddha click kar ke switch karne ke liye) */}
       <div className="absolute top-4 right-4 z-50">
         <button 
-          onClick={() => setIsAdmin(!isAdmin)} 
-          className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 transition-all"
+          onClick={() => setIsOwner(!isOwner)}
+          className="text-xs bg-white/10 hover:bg-white/20 border border-white/10 text-slate-300 px-3 py-1.5 rounded-xl transition-all"
         >
-          Switch to {isAdmin ? 'Visitor View' : 'Owner View'}
+          Switch to {isOwner ? 'Visitor View' : 'Owner View'}
         </button>
       </div>
 
       {/* Frosted Glass Main Card */}
       <div className="w-full max-w-5xl backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 md:p-8 shadow-2xl space-y-8">
         
-        {/* --- VIEW 1: VISITOR PORTAL --- */}
-        {!isAdmin ? (
+        {/* ==============================================
+            Condition 1: VISITOR VIEW (isOwner === false)
+           ============================================== */}
+        {!isOwner ? (
           <>
+            {/* Header */}
             <div className="text-center space-y-2">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 dropping-shadow-md">
                 Gate Visitor Portal
@@ -166,7 +167,7 @@ export default function App() {
                 </form>
               </div>
 
-              {/* Right Column: Live Status Sync */}
+              {/* Right Column: Live Logs Sync Status */}
               <div className="backdrop-blur-md bg-black/20 p-6 rounded-2xl border border-white/10 flex flex-col h-[350px]">
                 <h2 className="text-xl font-bold mb-4 text-blue-400 flex justify-between items-center">
                   <span>Live Monitor</span>
@@ -200,24 +201,29 @@ export default function App() {
             </div>
           </>
         ) : (
-          /* --- VIEW 2: OWNER CONTROL PORTAL --- */
+          /* ==============================================
+              Condition 2: OWNER VIEW (isOwner === true)
+             ============================================== */
           <>
+            {/* Owner Header */}
             <div className="text-center space-y-2">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-500 dropping-shadow-md">
-                Owner Security Command
+                Owner Security Dashboard
               </h1>
-              <p className="text-sm text-slate-300">Real-time Approval & Access Token Control Center</p>
+              <p className="text-sm text-slate-300">Real-time Gate Access Control & Approvals</p>
             </div>
 
+            {/* Main Command Monitor */}
             <div className="backdrop-blur-md bg-black/20 p-6 rounded-2xl border border-white/10 flex flex-col min-h-[400px]">
               <h2 className="text-xl font-bold mb-6 text-amber-400 flex justify-between items-center">
-                <span>Incoming Gate Requests</span>
-                <span className="text-xs bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full border border-amber-500/20">
-                  {logs.filter(l => l.status === 'Pending').length} Pending Requests
+                <span>Active Gate Requests</span>
+                <span className="text-xs bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full border border-amber-500/20 font-mono">
+                  {logs.filter(l => l.status === 'Pending').length} Pending
                 </span>
               </h2>
 
-              <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1">
+              {/* Dynamic Scroll List */}
+              <div className="space-y-4 overflow-y-auto max-h-[480px] pr-1 custom-scrollbar">
                 {logs.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center my-auto">No entry requests found in database.</p>
                 ) : (
@@ -227,9 +233,9 @@ export default function App() {
                         <div className="flex items-center gap-3">
                           <p className="font-bold text-base text-white">{log.name}</p>
                           <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                            log.status === 'Approved' ? 'bg-green-500/20 text-green-400' :
-                            log.status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
-                            'bg-yellow-500/20 text-yellow-400'
+                            log.status === 'Approved' ? 'bg-green-500/20 text-green-400 border border-green-500/20' :
+                            log.status === 'Rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/20' :
+                            'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20'
                           }`}>
                             {log.status}
                           </span>
@@ -239,25 +245,25 @@ export default function App() {
                         </p>
                       </div>
 
-                      {/* Control Buttons (Sirf Pending requests par action show hoga) */}
-                      {log.status === 'Pending' ? (
+                      {/* Action Interface (Sirf PENDING logs par buttons show honge) */}
+                      {log.status === 'Pending' && log.id ? (
                         <div className="flex gap-2 w-full sm:w-auto">
                           <button 
-                            onClick={() => handleUpdateStatus(log.id, 'Rejected')}
-                            className="flex-1 sm:flex-none bg-red-600/30 hover:bg-red-600 border border-red-500/50 text-red-200 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                            onClick={() => handleUpdateStatus(log.id!, 'Rejected')}
+                            className="flex-1 sm:flex-none bg-red-600/30 hover:bg-red-600 border border-red-500/40 text-red-200 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all transform active:scale-95"
                           >
                             Deny Entry
                           </button>
                           <button 
-                            onClick={() => handleUpdateStatus(log.id, 'Approved')}
-                            className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-lg transition-all"
+                            onClick={() => handleUpdateStatus(log.id!, 'Approved')}
+                            className="flex-1 sm:flex-none bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all transform active:scale-95"
                           >
                             Approve Access
                           </button>
                         </div>
                       ) : (
-                        <div className="text-xs text-slate-500 italic">
-                          Action completed
+                        <div className="text-xs text-slate-500 italic px-2">
+                          Handled
                         </div>
                       )}
                     </div>
